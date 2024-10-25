@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://wrt50ch0elke"]
+
+[ext_resource type="Script" path="res://scripts/components/TetrisBlock.gd" id="1_skl1j"]
+
+[node name="Block" type="Node2D"]
+script = ExtResource("1_skl1j")
