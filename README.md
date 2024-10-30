@@ -1,12 +1,14 @@
-# LeTris - A Modern Tetris Clone
+https://github.com/user-attachments/assets/58008fd3-3721-4471-bde0-e156536f3c80
 
-LeTris is a contemporary take on the classic Tetris game, built with the Godot Engine. It combines traditional Tetris gameplay mechanics with modern features and mobile-optimized controls.
+# CubiDrop - A Modern Block-Stacking Puzzle Game
+
+CubiDrop is a fresh take on the classic block-stacking puzzle genre, built with the Godot Engine. It combines familiar gameplay mechanics with modern features and mobile-optimized controls, creating an engaging and addictive puzzle experience.
 
 ## 🎮 Features
 
 ### Currently Implemented
-- Classic Tetris gameplay mechanics
-- Seven standard Tetromino pieces (I, O, T, S, Z, J, L)
+- Classic block-stacking puzzle gameplay
+- Seven unique pieces with distinct shapes
 - Smooth piece rotation and movement
 - Line clearing system
 - Progressive difficulty with increasing speed
@@ -50,7 +52,7 @@ Current control scheme:
 ## 📁 Project Structure
 
 ```
-LeTris/
+CubiDrop/
 ├── assets/
 │   ├── sprites/
 │   ├── sounds/
@@ -75,4 +77,4 @@ Developed by Patrick Aziken
 
 ## 📄 License
 
-This is covered by the [MIT License](https://github.com/skylarng89/letris/blob/main/LICENSE).
+This is covered by the [MIT License](https://github.com/skylarng89/cubidrop/blob/main/LICENSE).
