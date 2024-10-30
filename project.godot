@@ -10,15 +10,15 @@ config_version=5
 
 [application]
 
-config/name="LeTris"
+config/name="CubiDrop"
+config/description="A classic game of tetris called CubiDrop."
+config/version="0.0.1"
 run/main_scene="res://scenes/game/Game.tscn"
 config/features=PackedStringArray("4.3", "Mobile")
+boot_splash/bg_color=Color(0.0516255, 0.146442, 0.233021, 1)
 config/icon="res://icon.svg"
-
-[editor]
-
-version_control/plugin_name="GitPlugin"
 
 [rendering]
 
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true
