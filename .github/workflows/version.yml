@@ -1,0 +1,90 @@
+name: Project Versioning
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - dev
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Get previous tag
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        continue-on-error: true
+        
+      - name: Calculate new version
+        id: calculate_version
+        run: |
+          # Default to 0.1.0 if no previous tag
+          PREVIOUS_VERSION="${{ steps.previoustag.outputs.tag || '0.1.0' }}"
+          BRANCH="${{ github.ref_name }}"
+          
+          # Remove any pre-release suffix to work with version
+          BASE_VERSION=$(echo $PREVIOUS_VERSION | sed -E 's/(-dev.*|-rc.*)$//')
+          
+          # Get commit messages since last tag
+          COMMITS=$(git log "$(git describe --tags --abbrev=0 2>/dev/null || echo HEAD^)"..HEAD --pretty=format:"%s")
+          
+          # Initialize version parts
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+          
+          # Check commit messages for version bumping
+          if echo "$COMMITS" | grep -q "BREAKING CHANGE:\|!:"; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif echo "$COMMITS" | grep -q "^feat:"; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          
+          # Set version based on branch
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          if [ "$BRANCH" = "dev" ]; then
+            NEW_VERSION="${NEW_VERSION}-dev.1"
+          elif [ "$BRANCH" = "staging" ]; then
+            NEW_VERSION="${NEW_VERSION}-rc.1"
+          fi
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Godot version
+        run: |
+          # Update version in project.godot
+          sed -i -E "s/config\/version=\".*\"/config\/version=\"${{ steps.calculate_version.outputs.new_version }}\"/" project.godot
+          
+          # Update export_presets.cfg if it exists
+          if [ -f "export_presets.cfg" ]; then
+            sed -i -E "s/application\/version=\".*\"/application\/version=\"${{ steps.calculate_version.outputs.new_version }}\"/" export_presets.cfg
+            # Convert version to numeric format for version_code (e.g., 1.2.3 -> 123)
+            VERSION_CODE=$(echo ${{ steps.calculate_version.outputs.new_version }} | sed 's/[^0-9]//g')
+            sed -i -E "s/application\/version_code=\".*\"/application\/version_code=\"$VERSION_CODE\"/" export_presets.cfg
+          fi
+          
+          # Commit the version updates
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git add project.godot export_presets.cfg || true
+          git commit -m "chore: update version to ${{ steps.calculate_version.outputs.new_version }}" || true
+          git push
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.calculate_version.outputs.new_version }}
+          name: Release ${{ steps.calculate_version.outputs.new_version }}
+          draft: false
+          prerelease: ${{ github.ref_name != 'main' }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
