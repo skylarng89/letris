@@ -1,10 +1,14 @@
-[gd_scene load_steps=3 format=3 uid="uid://djo343btbdnqf"]
+[gd_scene load_steps=4 format=3 uid="uid://djo343btbdnqf"]
 
 [ext_resource type="Script" path="res://scripts/components/TetrisCore.gd" id="1_yrfnp"]
 [ext_resource type="Script" path="res://scripts/components/TetrisGrid.gd" id="2_08wae"]
+[ext_resource type="Script" path="res://scripts/components/PreviewWindow.gd" id="3_cjoia"]
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_yrfnp")
 
 [node name="Grid" type="Node2D" parent="."]
 script = ExtResource("2_08wae")
+
+[node name="PreviewWindow" type="Node2D" parent="."]
+script = ExtResource("3_cjoia")

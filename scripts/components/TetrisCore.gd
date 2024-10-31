@@ -50,6 +50,8 @@ func _ready():
 	if !OS.has_feature("mobile"):
 		start_game()
 	get_tree().root.size_changed.connect(_on_viewport_size_changed)
+	if has_node("PreviewWindow"):
+		get_tree().root.size_changed.connect($PreviewWindow._on_viewport_size_changed)
 
 func setup_platform_specific():
 	if OS.has_feature("mobile"):
@@ -75,10 +77,20 @@ func setup_responsive_layout():
 	var screen_size = get_viewport().get_visible_rect().size
 	var scale = min(screen_size.x / (GRID_WIDTH * CELL_SIZE * 1.5),
 				   screen_size.y / (GRID_HEIGHT * CELL_SIZE * 1.2))
+	
+	# Cap maximum scale
 	scale = min(scale, 2.0)
+	
+	# Apply scale to game elements
 	$Grid.scale = Vector2(scale, scale)
+	
+	# Center the game grid
 	var grid_size = Vector2(GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE)
 	$Grid.position = (screen_size - (grid_size * scale)) / 2
+	
+	# Force preview window update
+	if has_node("PreviewWindow"):
+		$PreviewWindow.position_preview_window()
 
 func start_game():
 	game_started = true
@@ -189,7 +201,13 @@ func spawn_new_piece():
 	current_piece_type = next_piece_type
 	current_piece = TETROMINOES[current_piece_type].duplicate()
 	next_piece_type = TETROMINOES.keys()[randi() % TETROMINOES.size()]
+	
+	# Start position (center-top of grid)
 	current_piece_pos = Vector2i(GRID_WIDTH / 2, 1)
+	
+	# Update preview
+	if has_node("PreviewWindow"):
+		$PreviewWindow.update_preview(next_piece_type)
 	
 	if !can_move_to(current_piece, current_piece_pos):
 		game_over()
@@ -327,6 +345,9 @@ func reset_game():
 	current_piece = null
 	next_piece_type = ""
 	$Grid.update_blocks()
+	
+	if has_node("PreviewWindow"):
+		$PreviewWindow.update_preview("")
 
 func _on_viewport_size_changed():
 	setup_responsive_layout()

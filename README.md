@@ -63,8 +63,8 @@ CubiDrop/
 │   ├── ui/
 │   └── menus/
 └── scripts/
-    ├── autoload/
-    └── components/
+	├── autoload/
+	└── components/
 ```
 
 ## 📱 Mobile Deployment
