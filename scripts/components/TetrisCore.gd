@@ -29,13 +29,13 @@ var score = 0
 var level = 1
 var lines_cleared = 0
 
-# Game settings
-var normal_drop_time = 1.0  # Store the normal drop speed
-var fast_drop_time = 0.05   # Speed when holding down
-var fast_drop_delay = 0.5  # 500ms delay
-var fast_drop_timer = 0.00  # Timer to track the delay
+# Game settings and timers
+var normal_drop_time = 1.0
+var fast_drop_time = 0.05
 var drop_time = normal_drop_time
 var drop_timer = 0.0
+var fast_drop_delay = 0.5
+var fast_drop_timer = 0.0
 var is_fast_dropping = false
 
 # Touch input handling
@@ -43,6 +43,7 @@ var touch_start_pos = null
 var is_paused = false
 var game_started = false
 
+# Initialization and Setup
 func _ready():
 	setup_platform_specific()
 	initialize_grid()
@@ -50,10 +51,6 @@ func _ready():
 	if !OS.has_feature("mobile"):
 		start_game()
 	get_tree().root.size_changed.connect(_on_viewport_size_changed)
-	if has_node("PreviewWindow"):
-		get_tree().root.size_changed.connect($PreviewWindow._on_viewport_size_changed)
-	if has_node("ScoreDisplay"):
-		get_tree().root.size_changed.connect($ScoreDisplay._on_viewport_size_changed)
 
 func setup_platform_specific():
 	if OS.has_feature("mobile"):
@@ -79,31 +76,56 @@ func setup_responsive_layout():
 	var screen_size = get_viewport().get_visible_rect().size
 	var scale = min(screen_size.x / (GRID_WIDTH * CELL_SIZE * 1.5),
 				   screen_size.y / (GRID_HEIGHT * CELL_SIZE * 1.2))
-	
-	# Cap maximum scale
 	scale = min(scale, 2.0)
-	
-	# Apply scale to game elements
 	$Grid.scale = Vector2(scale, scale)
-	
-	# Center the game grid
 	var grid_size = Vector2(GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE)
 	$Grid.position = (screen_size - (grid_size * scale)) / 2
-	
-	# Force preview window update
-	if has_node("PreviewWindow"):
-		$PreviewWindow.position_preview_window()
 
-func start_game():
-	game_started = true
-	spawn_new_piece()
+# Main Game Loop
+func _process(delta):
+	if current_piece == null or is_paused:
+		return
+	
+	# Handle fast drop when down key is held
+	if Input.is_action_pressed("ui_down"):
+		if is_fast_dropping:
+			drop_timer += delta
+			if drop_timer >= fast_drop_time:
+				drop_timer = 0
+				move_down()
+		else:
+			# Start counting towards fast drop
+			fast_drop_timer += delta
+			if fast_drop_timer >= fast_drop_delay:
+				is_fast_dropping = true
+				drop_timer = 0
+	else:
+		# Normal dropping
+		is_fast_dropping = false
+		fast_drop_timer = 0
+		drop_timer += delta
+		if drop_timer >= normal_drop_time * pow(0.8, level - 1):
+			drop_timer = 0
+			move_down()
+	
 	$Grid.update_blocks()
 
+# Input Handling
 func _input(event):
-	if OS.has_feature("mobile"):
-		handle_touch_input(event)
-	else:
-		handle_keyboard_input(event)
+	if current_piece == null:
+		return
+	if event.is_action_pressed("ui_left"):
+		move_horizontal(-1)
+	elif event.is_action_pressed("ui_right"):
+		move_horizontal(1)
+	elif event.is_action_pressed("ui_up"):
+		rotate_piece()
+	elif event.is_action_pressed("ui_down"):
+		# Single tap moves piece down one step
+		move_down()
+		drop_timer = 0  # Reset drop timer to prevent immediate automatic drop
+	elif event.is_action_pressed("ui_select"):  # Space bar
+		hard_drop()
 
 func handle_touch_input(event):
 	if event is InputEventScreenTouch:
@@ -123,70 +145,7 @@ func handle_touch_input(event):
 			start_fast_drop()
 			touch_start_pos = event.position
 
-func handle_keyboard_input(event):
-	if current_piece == null:
-		return
-	if event.is_action_pressed("ui_left"):
-		move_horizontal(-1)
-	elif event.is_action_pressed("ui_right"):
-		move_horizontal(1)
-	elif event.is_action_pressed("ui_up"):
-		rotate_piece()
-	elif event.is_action_pressed("ui_down"):
-		start_fast_drop()
-	elif event.is_action_released("ui_down"):
-		end_fast_drop()
-	elif event.is_action_pressed("ui_select"):
-		hard_drop()
-
-func _on_mobile_move_left():
-	move_horizontal(-1)
-
-func _on_mobile_move_right():
-	move_horizontal(1)
-
-func _on_mobile_rotate():
-	rotate_piece()
-
-func _on_mobile_soft_drop():
-	start_fast_drop()
-
-func _on_mobile_soft_drop_released():
-	end_fast_drop()
-
-func _on_mobile_hold():
-	hold_piece()
-
-func start_fast_drop():
-	if !is_fast_dropping:
-		fast_drop_timer = 0.0  # Reset the delay timer
-		is_fast_dropping = true
-		# Keep normal speed until delay is met
-		# The actual speed change will happen in _process
-
-func end_fast_drop():
-	is_fast_dropping = false
-	fast_drop_timer = 0.0
-	drop_time = normal_drop_time * pow(0.8, level - 1)  # Restore normal speed with level scaling
-
-func _process(delta):
-	if current_piece == null or is_paused:
-		return
-	
-	# Handle fast drop delay
-	if is_fast_dropping:
-		fast_drop_timer += delta
-		if fast_drop_timer >= fast_drop_delay:
-			drop_time = fast_drop_time
-		else:
-			drop_time = normal_drop_time * pow(0.8, level - 1)
-	
-	drop_timer += delta
-	if drop_timer >= drop_time:
-		drop_timer = 0
-		move_down()
-	$Grid.update_blocks()
-
+# Grid Management
 func initialize_grid():
 	grid.clear()
 	for y in range(GRID_HEIGHT):
@@ -196,6 +155,16 @@ func initialize_grid():
 			row[x] = null
 		grid.append(row)
 
+func get_grid_value(x: int, y: int) -> Variant:
+	if y >= 0 and y < grid.size() and x >= 0 and x < grid[y].size():
+		return grid[y][x]
+	return null
+
+func set_grid_value(x: int, y: int, value: Variant) -> void:
+	if y >= 0 and y < grid.size() and x >= 0 and x < grid[y].size():
+		grid[y][x] = value
+
+# Piece Management
 func spawn_new_piece():
 	if next_piece_type == "":
 		next_piece_type = TETROMINOES.keys()[randi() % TETROMINOES.size()]
@@ -203,8 +172,6 @@ func spawn_new_piece():
 	current_piece_type = next_piece_type
 	current_piece = TETROMINOES[current_piece_type].duplicate()
 	next_piece_type = TETROMINOES.keys()[randi() % TETROMINOES.size()]
-	
-	# Start position (center-top of grid)
 	current_piece_pos = Vector2i(GRID_WIDTH / 2, 1)
 	
 	# Update preview
@@ -259,6 +226,7 @@ func lock_piece():
 		if grid_pos.y >= 0:
 			grid[grid_pos.y][grid_pos.x] = current_piece_type
 
+# Line Clearing and Scoring
 func clear_lines():
 	var lines_to_clear = []
 	
@@ -294,9 +262,11 @@ func update_score(num_lines):
 		level = new_level
 		normal_drop_time = max(0.1, 1.0 - (level - 1) * 0.1)
 		drop_time = fast_drop_time if is_fast_dropping else normal_drop_time
+	
 	if has_node("ScoreDisplay"):
 		$ScoreDisplay.update_display()
 
+# Piece Holding
 func hold_piece():
 	if !can_hold:
 		return
@@ -313,18 +283,45 @@ func hold_piece():
 		current_piece = TETROMINOES[current_piece_type].duplicate()
 		current_piece_pos = Vector2i(GRID_WIDTH / 2, 1)
 
+# Drop Speed Management
+func start_fast_drop():
+	is_fast_dropping = true
+	drop_time = fast_drop_time
+	drop_timer = drop_time
+
+func end_fast_drop():
+	is_fast_dropping = false
+	fast_drop_timer = 0
+	drop_time = normal_drop_time * pow(0.8, level - 1)
+
+# Mobile Control Handlers
+func _on_mobile_move_left():
+	move_horizontal(-1)
+
+func _on_mobile_move_right():
+	move_horizontal(1)
+
+func _on_mobile_rotate():
+	rotate_piece()
+
+func _on_mobile_soft_drop():
+	start_fast_drop()
+
+func _on_mobile_soft_drop_released():
+	end_fast_drop()
+
+func _on_mobile_hold():
+	hold_piece()
+
+# Game State Management
+func start_game():
+	game_started = true
+	spawn_new_piece()
+	$Grid.update_blocks()
+
 func game_over():
 	print("Game Over!")
 	reset_game()
-
-func get_grid_value(x: int, y: int) -> Variant:
-	if y >= 0 and y < grid.size() and x >= 0 and x < grid[y].size():
-		return grid[y][x]
-	return null
-
-func set_grid_value(x: int, y: int, value: Variant) -> void:
-	if y >= 0 and y < grid.size() and x >= 0 and x < grid[y].size():
-		grid[y][x] = value
 
 func pause_game():
 	is_paused = true
@@ -348,12 +345,10 @@ func reset_game():
 	is_paused = false
 	current_piece = null
 	next_piece_type = ""
-	$Grid.update_blocks()
 	if has_node("ScoreDisplay"):
 		$ScoreDisplay.update_display()
-	
 	if has_node("PreviewWindow"):
 		$PreviewWindow.update_preview("")
 
 func _on_viewport_size_changed():
-	setup_responsive_layout()
+	setup_responsive_layout() 
