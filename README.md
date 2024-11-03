@@ -15,9 +15,10 @@ CubiDrop is a fresh take on the classic block-stacking puzzle genre, built with 
 - Score system
 - Game over detection
 - Modern visual design with 3D-like block effects
+- Next piece preview
+- Cross-Platform Adaptation
 
 ### Coming Soon
-- Next piece preview
 - Piece holding system
 - Enhanced UI with score/level display
 - Sound effects and background music
