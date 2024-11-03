@@ -52,6 +52,8 @@ func _ready():
 	get_tree().root.size_changed.connect(_on_viewport_size_changed)
 	if has_node("PreviewWindow"):
 		get_tree().root.size_changed.connect($PreviewWindow._on_viewport_size_changed)
+	if has_node("ScoreDisplay"):
+		get_tree().root.size_changed.connect($ScoreDisplay._on_viewport_size_changed)
 
 func setup_platform_specific():
 	if OS.has_feature("mobile"):
@@ -292,6 +294,8 @@ func update_score(num_lines):
 		level = new_level
 		normal_drop_time = max(0.1, 1.0 - (level - 1) * 0.1)
 		drop_time = fast_drop_time if is_fast_dropping else normal_drop_time
+	if has_node("ScoreDisplay"):
+		$ScoreDisplay.update_display()
 
 func hold_piece():
 	if !can_hold:
@@ -345,6 +349,8 @@ func reset_game():
 	current_piece = null
 	next_piece_type = ""
 	$Grid.update_blocks()
+	if has_node("ScoreDisplay"):
+		$ScoreDisplay.update_display()
 	
 	if has_node("PreviewWindow"):
 		$PreviewWindow.update_preview("")
