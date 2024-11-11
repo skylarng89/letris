@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bbbk5obmp7u2y"]
+
+[node name="ResetDialog" type="CanvasLayer"]
+
+[node name="ConfirmationDialog" type="ConfirmationDialog" parent="."]
+title = "Confirm Reset"
+size = Vector2i(300, 120)
+dialog_text = "Reset game and all scores?"

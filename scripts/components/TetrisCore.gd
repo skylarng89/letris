@@ -43,7 +43,6 @@ var touch_start_pos = null
 var is_paused = false
 var game_started = false
 
-# Initialization and Setup
 func _ready():
 	setup_platform_specific()
 	initialize_grid()
@@ -81,7 +80,6 @@ func setup_responsive_layout():
 	var grid_size = Vector2(GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE)
 	$Grid.position = (screen_size - (grid_size * scale)) / 2
 
-# Main Game Loop
 func _process(delta):
 	if current_piece == null or is_paused:
 		return
@@ -110,8 +108,11 @@ func _process(delta):
 	
 	$Grid.update_blocks()
 
-# Input Handling
 func _input(event):
+	if event.is_action_pressed("ui_cancel"):  # ESC key
+		trigger_reset_game()
+		return
+		
 	if current_piece == null:
 		return
 	if event.is_action_pressed("ui_left"):
@@ -145,7 +146,6 @@ func handle_touch_input(event):
 			start_fast_drop()
 			touch_start_pos = event.position
 
-# Grid Management
 func initialize_grid():
 	grid.clear()
 	for y in range(GRID_HEIGHT):
@@ -164,7 +164,6 @@ func set_grid_value(x: int, y: int, value: Variant) -> void:
 	if y >= 0 and y < grid.size() and x >= 0 and x < grid[y].size():
 		grid[y][x] = value
 
-# Piece Management
 func spawn_new_piece():
 	if next_piece_type == "":
 		next_piece_type = TETROMINOES.keys()[randi() % TETROMINOES.size()]
@@ -174,7 +173,6 @@ func spawn_new_piece():
 	next_piece_type = TETROMINOES.keys()[randi() % TETROMINOES.size()]
 	current_piece_pos = Vector2i(GRID_WIDTH / 2, 1)
 	
-	# Update preview
 	if has_node("PreviewWindow"):
 		$PreviewWindow.update_preview(next_piece_type)
 	
@@ -226,7 +224,6 @@ func lock_piece():
 		if grid_pos.y >= 0:
 			grid[grid_pos.y][grid_pos.x] = current_piece_type
 
-# Line Clearing and Scoring
 func clear_lines():
 	var lines_to_clear = []
 	
@@ -266,11 +263,10 @@ func update_score(num_lines):
 	if has_node("ScoreDisplay"):
 		$ScoreDisplay.update_display()
 
-# Piece Holding
 func hold_piece():
 	if !can_hold:
 		return
-		
+	
 	can_hold = false
 	var temp = current_piece_type
 	
@@ -283,7 +279,6 @@ func hold_piece():
 		current_piece = TETROMINOES[current_piece_type].duplicate()
 		current_piece_pos = Vector2i(GRID_WIDTH / 2, 1)
 
-# Drop Speed Management
 func start_fast_drop():
 	is_fast_dropping = true
 	drop_time = fast_drop_time
@@ -294,7 +289,6 @@ func end_fast_drop():
 	fast_drop_timer = 0
 	drop_time = normal_drop_time * pow(0.8, level - 1)
 
-# Mobile Control Handlers
 func _on_mobile_move_left():
 	move_horizontal(-1)
 
@@ -313,14 +307,49 @@ func _on_mobile_soft_drop_released():
 func _on_mobile_hold():
 	hold_piece()
 
-# Game State Management
 func start_game():
 	game_started = true
 	spawn_new_piece()
 	$Grid.update_blocks()
 
+func trigger_reset_game():
+	if has_node("ResetDialog"):
+		pause_game()  # Pause the game while dialog is shown
+		$ResetDialog.show_dialog()
+
+func _on_reset_confirmed():
+	# Reset scores
+	if has_node("ScoreDisplay"):
+		$ScoreDisplay.reset_scores()
+	
+	# Reset game state
+	score = 0
+	level = 1
+	lines_cleared = 0
+	normal_drop_time = 1.0
+	drop_time = normal_drop_time
+	is_fast_dropping = false
+	initialize_grid()
+	held_piece_type = ""
+	can_hold = true
+	game_started = false
+	is_paused = false
+	current_piece = null
+	next_piece_type = ""
+	
+	# Update displays
+	if has_node("ScoreDisplay"):
+		$ScoreDisplay.update_display()
+	if has_node("PreviewWindow"):
+		$PreviewWindow.update_preview("")
+	
+	# Restart game
+	start_game()
+
+func _on_reset_cancelled():
+	resume_game()
+
 func game_over():
-	print("Game Over!")
 	reset_game()
 
 func pause_game():
@@ -351,4 +380,4 @@ func reset_game():
 		$PreviewWindow.update_preview("")
 
 func _on_viewport_size_changed():
-	setup_responsive_layout() 
+	setup_responsive_layout()
